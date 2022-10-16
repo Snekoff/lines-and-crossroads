@@ -1,0 +1,12 @@
+canvas {
+    border: solid black 3px;
+    display: block;
+    margin: auto;
+    width: 802px;
+    height: 602px;
+}
+
+button {
+    display: block;
+    margin: 10px auto auto;
+}

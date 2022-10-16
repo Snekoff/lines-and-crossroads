@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Line Crossroads</title>
+    <link rel="stylesheet" href="index.css">
+</head>
+<body>
+
+<canvas id="drawingCanvas" width="800" height="600">
+
+</canvas>
+
+<button id="collapseButton">
+    collapse lines
+</button>
+
+<script type="module">
+    import {DrawingLines} from "./func.js"
+
+    let drawingLines = new DrawingLines();
+    document.getElementById("drawingCanvas").addEventListener("click", (event) => {
+        //console.log('click', event);
+        drawingLines.onLeftClick(event.offsetX, event.offsetY);
+    })
+
+    document.getElementById("drawingCanvas").addEventListener("mousemove", (event) => {
+        drawingLines.onMouseMove(event.offsetX, event.offsetY);
+    })
+
+    document.addEventListener("mousedown", (event) => {
+        if(event.button === 2) {
+            /*console.log('Rclick', event);*/
+            drawingLines.onRightClick();
+        }
+    })
+
+    document.getElementById("collapseButton").addEventListener("click", () => drawingLines.collapseLines())
+</script>
+
+</body>
+</html>

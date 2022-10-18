@@ -160,7 +160,6 @@ export class DrawingLines {
             this.drawLineArray();
             this.counter = 0;
         }, 3000)
-
     }
 
     reduceLinesLength(lineArr, counter) {

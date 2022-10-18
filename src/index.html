@@ -18,7 +18,8 @@
 <script type="module">
     import {DrawingLines} from "./func.js"
 
-    let drawingLines = new DrawingLines();
+    let canvas = document.getElementById("drawingCanvas");
+    let drawingLines = new DrawingLines(canvas);
     document.getElementById("drawingCanvas").addEventListener("click", (event) => {
         drawingLines.onLeftClick(event.offsetX, event.offsetY);
     })

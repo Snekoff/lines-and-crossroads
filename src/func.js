@@ -1,22 +1,16 @@
+`use strict`
+import {Drawing} from "./drawing.js";
+
 export class DrawingLines {
-    canvas;
-    ctx;
-    width;
-    height;
     isLineStarted = false;
     linesArray = []; // [[x1, y1, x2, y2], .....]
     dotsArray = []; // [[x1, y1], .....]
     lastClickCords = [-1, -1];
+    counter = 0;
 
-    constructor() {
-        this.canvas = document.getElementById("drawingCanvas");
-        this.ctx = this.canvas.getContext("2d");
-        this.width = this.canvas.width
-        this.height = this.canvas.height
-        if (!this.canvas.getContext("2d")) alert("your browser does not support canvas");
-        this.ctx.lineWidth = 1;
-        this.ctx.strokeStyle = "black";
-        this.counter = 0;
+
+    constructor(canvasElem) {
+        this.drawing = new Drawing(canvasElem);
     }
 
     onLeftClick(x, y) {
@@ -25,73 +19,35 @@ export class DrawingLines {
             this.isLineStarted = true;
 
         } else {
-            this.drawLine(...this.lastClickCords, x, y);
             let newLine = [...this.lastClickCords, x, y]
             let dotArr = this.searchForCrossings(newLine, this.linesArray);
             dotArr.forEach((item) => this.dotsArray.push(item));
             this.linesArray.push(newLine) // [[x1, y1, x2, y2], .....]
-            this.placeDots(dotArr);
 
             this.lastClickCords = [-1, -1];
             this.isLineStarted = false;
+
+            this.drawing.drawLineArray(this.linesArray);
+            this.drawing.placeDots(this.dotsArray);
         }
     }
 
     onMouseMove(newX, newY) {
         if (!this.isLineStarted) return -1;
 
-        this.ctx.reset();
-        this.drawLineArray();
-        this.placeDots(this.dotsArray)
-
-        this.ctx.beginPath();
-        this.ctx.moveTo(...this.lastClickCords);
-        this.ctx.lineTo(newX, newY);
-
+        this.drawing.drawLineArray(this.linesArray);
+        this.drawing.placeDots(this.dotsArray);
+        this.drawing.drawLine([...this.lastClickCords, newX, newY]);
         let newLine = [...this.lastClickCords, newX, newY]
         let dotArr = this.searchForCrossings(newLine, this.linesArray);
-        this.ctx.stroke();
-        this.ctx.beginPath();
-        this.placeDots(dotArr);
+        this.drawing.placeDots(dotArr, true);
+
     }
 
     onRightClick() {
         this.isLineStarted = false;
-        this.ctx.reset();
-        this.drawLineArray()
-        this.placeDots(this.dotsArray)
-    }
-
-    drawLine(coords) {
-        this.ctx.restore();
-        this.ctx.beginPath();
-        this.ctx.moveTo(coords[0], coords[1]);
-        this.ctx.lineTo(coords[2], coords[3]);
-        this.ctx.stroke();
-    }
-
-    drawLineArray() {
-        this.ctx.lineWidth = 1;
-        this.ctx.strokeStyle = "black";
-        this.ctx.save();
-        for (let line of this.linesArray) {
-            this.drawLine(line);
-        }
-    }
-
-    placeDots(dotsArray) {
-        for (let dot of dotsArray) {
-            this.drawCircle(dot[0], dot[1]);
-        }
-    }
-
-    drawCircle(x = 0, y = 0) {
-        this.ctx.beginPath();
-        this.ctx.save();
-        this.ctx.fillStyle = "red";
-        this.ctx.arc(x, y, 3, 0, 2 * Math.PI);
-        this.ctx.fill();
-        this.ctx.restore();
+        this.drawing.drawLineArray(this.linesArray);
+        this.drawing.placeDots(this.dotsArray);
     }
 
     searchForCrossings(currentLine, linesArr) {
@@ -146,8 +102,7 @@ export class DrawingLines {
             () => {
                 this.counter++;
                 this.linesArray = this.reduceLinesLength(this.linesArray, this.counter)
-                this.ctx.reset();
-                this.drawLineArray();
+                this.drawing.drawLineArray(this.linesArray);
             },
             20
         )
@@ -156,8 +111,7 @@ export class DrawingLines {
             clearInterval(collapsingInterval);
             this.linesArray = [];
             this.dotsArray = [];
-            this.ctx.reset();
-            this.drawLineArray();
+            this.drawing.drawLineArray(this.linesArray);
             this.counter = 0;
         }, 3000)
     }

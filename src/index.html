@@ -20,7 +20,6 @@
 
     let drawingLines = new DrawingLines();
     document.getElementById("drawingCanvas").addEventListener("click", (event) => {
-        //console.log('click', event);
         drawingLines.onLeftClick(event.offsetX, event.offsetY);
     })
 
@@ -30,7 +29,6 @@
 
     document.addEventListener("mousedown", (event) => {
         if(event.button === 2) {
-            /*console.log('Rclick', event);*/
             drawingLines.onRightClick();
         }
     })

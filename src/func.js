@@ -4,8 +4,8 @@ export class DrawingLines {
     width;
     height;
     isLineStarted = false;
-    linesArray = [];
-    linesPaths = [];
+    linesArray = []; // [[x1, y1, x2, y2], .....]
+    dotsArray = []; // [[x1, y1], .....]
     lastClickCords = [-1, -1];
 
     constructor() {
@@ -13,34 +13,24 @@ export class DrawingLines {
         this.ctx = this.canvas.getContext("2d");
         this.width = this.canvas.width
         this.height = this.canvas.height
-        if(!this.canvas.getContext("2d")) alert("your browser does not support canvas");
-        this.ctx.lineWidth = 3;
+        if (!this.canvas.getContext("2d")) alert("your browser does not support canvas");
+        this.ctx.lineWidth = 1;
         this.ctx.strokeStyle = "black";
         this.counter = 0;
     }
 
-    // ideas
-    // 1. save/restore canvas
-
     onLeftClick(x, y) {
-        /*console.log("onLeftClick");
-        console.log("x", x);
-        console.log("y", y);
-        console.log("this.isLineStarted", this.isLineStarted);
-        console.log("this.ctx", this.ctx);
-        console.log("this.lastClickCords", this.lastClickCords);
-        console.log("this.linesArray", this.linesArray);*/
-        if(this.isLineStarted === false) {
+        if (this.isLineStarted === false) {
             this.lastClickCords = [x, y];
             this.isLineStarted = true;
 
         } else {
-            this.drawLine(this.lastClickCords[0], this.lastClickCords[1], x, y)
-            // TODO: try to collect path here and store into array to use in crossroads and maybe in collapsing
-            this.linesArray.push([this.lastClickCords[0], this.lastClickCords[1], x, y]) // [[x1, y1, x2, y2], .....]
-
-            let path = new Path2D();
-
+            this.drawLine(...this.lastClickCords, x, y);
+            let newLine = [...this.lastClickCords, x, y]
+            let dotArr = this.searchForCrossings(newLine, this.linesArray);
+            dotArr.forEach((item) => this.dotsArray.push(item));
+            this.linesArray.push(newLine) // [[x1, y1, x2, y2], .....]
+            this.placeDots(dotArr);
 
             this.lastClickCords = [-1, -1];
             this.isLineStarted = false;
@@ -48,25 +38,32 @@ export class DrawingLines {
     }
 
     onMouseMove(newX, newY) {
-        if(!this.isLineStarted) return -1;
+        if (!this.isLineStarted) return -1;
 
         this.ctx.reset();
         this.drawLineArray();
+        this.placeDots(this.dotsArray)
+
         this.ctx.beginPath();
-        this.ctx.moveTo(this.lastClickCords[0], this.lastClickCords[1]);
+        this.ctx.moveTo(...this.lastClickCords);
         this.ctx.lineTo(newX, newY);
 
+        let newLine = [...this.lastClickCords, newX, newY]
+        let dotArr = this.searchForCrossings(newLine, this.linesArray);
         this.ctx.stroke();
-
+        this.ctx.beginPath();
+        this.placeDots(dotArr);
     }
 
     onRightClick() {
         this.isLineStarted = false;
         this.ctx.reset();
         this.drawLineArray()
+        this.placeDots(this.dotsArray)
     }
 
     drawLine(coords) {
+        this.ctx.restore();
         this.ctx.beginPath();
         this.ctx.moveTo(coords[0], coords[1]);
         this.ctx.lineTo(coords[2], coords[3]);
@@ -74,33 +71,74 @@ export class DrawingLines {
     }
 
     drawLineArray() {
-
-
-        this.ctx.lineWidth = 3;
+        this.ctx.lineWidth = 1;
         this.ctx.strokeStyle = "black";
-
-        for(let line of this.linesArray) {
+        this.ctx.save();
+        for (let line of this.linesArray) {
             this.drawLine(line);
         }
     }
 
-    checkIfLineCrossingAnotherLineAndReturnCordsIfItDoes() {
-        // Нехай є пряма АБ, ми хочемо дізнатись чи є точка перетину з створенною новою прямою СД
-        // 1. Визначимо чи вони перетинаються
-        // 1. а. Знайдемо НЕ абсолютні відстані від А до прямої СД, від Б до прямої СД,
-        // а також від С до АБ і від Д до АБ.
-        // 1. б. Якщо в обох випадках знак відстаней відрізняється або хочаб одна з відстаней 0 то прямі перетинаються
-        // 2. Якщо перетинаються то шукаємо точку
-        // 2. а. Беремо одну з прямих, знаходимо середину.
-        // 2. б. Бінарним пошуком шукаємо точку зміни знака відстані. Там насправді відстань має бути 0
-        // 3. Додаємо точку в список точок
-        // 4. Малюємо точку
-
-        return false
+    placeDots(dotsArray) {
+        for (let dot of dotsArray) {
+            this.drawCircle(dot[0], dot[1]);
+        }
     }
 
-    placeRedDotOnCrossing() {
+    drawCircle(x = 0, y = 0) {
+        this.ctx.beginPath();
+        this.ctx.save();
+        this.ctx.fillStyle = "red";
+        this.ctx.arc(x, y, 3, 0, 2 * Math.PI);
+        this.ctx.fill();
+        this.ctx.restore();
+    }
 
+    searchForCrossings(currentLine, linesArr) {
+        let dotsArr = []; // [[x1, y1], ....]
+        for (let line of linesArr) {
+            let newDot = this.searchForCrossingPointOfTwoLines(currentLine, line);
+            if (this.checkIfCrossingIsInLines(currentLine, line, newDot) === true) dotsArr.push(newDot);
+        }
+        return dotsArr
+    }
+
+    searchForCrossingPointOfTwoLines(lineAB, lineCD) {
+        let dotsX, dotsY;
+        let numberX, dividerX;
+        let numberY, dividerY;
+        let x1 = lineAB[0], y1 = lineAB[1], x2 = lineAB[2], y2 = lineAB[3];
+        let x3 = lineCD[0], y3 = lineCD[1], x4 = lineCD[2], y4 = lineCD[3];
+
+        numberX = (x1 * y2 - y1 * x2) * (x3 - x4) - (x1 - x2) * (x3 * y4 - y3 * x4)
+        dividerX = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
+
+        numberY = (x1 * y2 - y1 * x2) * (y3 - y4) - (y1 - y2) * (x3 * y4 - y3 * x4)
+        dividerY = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4)
+
+        if (dividerX === 0 || dividerY === 0) return [-1, -1];
+        dotsX = numberX / dividerX;
+        dotsY = numberY / dividerY;
+
+
+        return [Math.round(dotsX), Math.round(dotsY)];
+    }
+
+    checkIfCrossingIsInLines(lineAB, lineCD, dot) {
+        if (dot[0] === -1 && dot[1] === -1) return false;
+        let x1 = lineAB[0], y1 = lineAB[1], x2 = lineAB[2], y2 = lineAB[3];
+        let x3 = lineCD[0], y3 = lineCD[1], x4 = lineCD[2], y4 = lineCD[3];
+
+        // if dot lies inside lines X
+        if (((x1 >= dot[0] && dot[0] >= x2) || (x2 >= dot[0] && dot[0] >= x1)) &&
+            ((x3 >= dot[0] && dot[0] >= x4) || (x4 >= dot[0] && dot[0] >= x3))) {
+            // if dot lies inside lines Y
+            if (((y1 >= dot[1] && dot[1] >= y2) || (y2 >= dot[1] && dot[1] >= y1)) &&
+                ((y3 >= dot[1] && dot[1] >= y4) || (y4 >= dot[1] && dot[1] >= y3))) {
+                return true;
+            }
+        }
+        return false;
     }
 
     collapseLines() {
@@ -117,6 +155,7 @@ export class DrawingLines {
         setTimeout(() => {
             clearInterval(collapsingInterval);
             this.linesArray = [];
+            this.dotsArray = [];
             this.ctx.reset();
             this.drawLineArray();
             this.counter = 0;
@@ -126,8 +165,8 @@ export class DrawingLines {
 
     reduceLinesLength(lineArr, counter) {
         // smoothen animation
-        if(counter < 75) counter /= 2;
-        if(counter >= 75) counter *= 2;
+        if (counter < 75) counter /= 2;
+        if (counter >= 75) counter *= 2;
 
         let multiplier = Math.round(0.001 * counter * 100) / 100;
         lineArr = lineArr.map((coords) => {
@@ -135,7 +174,7 @@ export class DrawingLines {
             let distY = Math.abs(coords[1] - coords[3]);
 
             // X
-            if(coords[0] > coords[2]) {
+            if (coords[0] > coords[2]) {
                 coords[0] -= Math.round(distX * multiplier);
                 coords[2] += Math.round(distX * multiplier);
             } else {
@@ -143,7 +182,7 @@ export class DrawingLines {
                 coords[2] -= Math.round(distX * multiplier);
             }
             // Y
-            if(coords[1] > coords[3]) {
+            if (coords[1] > coords[3]) {
                 coords[1] -= Math.round(distY * multiplier);
                 coords[3] += Math.round(distY * multiplier);
             } else {
